@@ -1,0 +1,58 @@
+<div class="border rounded-3 p-3 shadow-sm text-center">
+    <h5 class="mb-3 d-flex align-items-center justify-content-center">
+        <span style="font-size: 24px; margin-right: 10px;">{{ device.icon }}</span>
+        {{ device.name }}
+    </h5>
+
+    <!-- Кнопка вкл / викл -->
+    <div class="d-flex justify-content-center mb-3">
+        <button type="button"
+                class="power-button {% if device.is_on %}on{% else %}off{% endif %}"
+                data-device-id="{{ device.id }}"
+                onclick="toggleDevice('{{ device.id }}')">
+            ⏻
+        </button>
+    </div>
+
+    {% if device.device_type == 'light' %}
+        <label class="form-label">Яскравість: <span id="brightness-val">{{ device.brightness|default:50 }}</span>%</label>
+        <input type="range" min="0" max="100" value="{{ device.brightness|default:50 }}"
+               class="fat-slider vertical-slider"
+               oninput="document.getElementById('brightness-val').textContent = this.value"
+               onchange="updateDevice({{ device.id }}, 'brightness', this.value)">
+    {% endif %}
+
+    {% if device.device_type == 'fridge' %}
+        <label class="form-label">Температура: <span id="temp-val">{{ device.temperature|default:4 }}</span>°C</label>
+        <input type="range" min="0" max="10" value="{{ device.temperature|default:4 }}"
+               class="fat-slider vertical-slider"
+               oninput="document.getElementById('temp-val').textContent = this.value"
+               onchange="updateDevice({{ device.id }}, 'temperature', this.value)">
+    {% endif %}
+
+    {% if device.device_type == 'climate' or device.device_type == 'thermostat' %}
+        <p class="text-muted mb-2">Температура зараз: {{ device.temperature|default:"–" }}°C</p>
+        <label class="form-label">Цільова температура: <span id="ttemp-val">{{ device.target_temperature|default:22 }}</span>°C</label>
+        <input type="range" min="10" max="30" value="{{ device.target_temperature|default:22 }}"
+               class="fat-slider vertical-slider"
+               oninput="document.getElementById('ttemp-val').textContent = this.value"
+               onchange="updateDevice({{ device.id }}, 'target_temperature', this.value)">
+    {% endif %}
+
+    {% if device.device_type == 'humidifier' %}
+        <label class="form-label">Вологість: <span id="hum-val">{{ device.humidity|default:40 }}</span>%</label>
+        <input type="range" min="0" max="100" value="{{ device.humidity|default:40 }}"
+               class="fat-slider vertical-slider"
+               oninput="document.getElementById('hum-val').textContent = this.value"
+               onchange="updateDevice({{ device.id }}, 'humidity', this.value)">
+    {% endif %}
+
+    {% if device.device_type == 'air_purifier' or device.device_type == 'ventilation' %}
+        <label class="form-label">Швидкість вентилятора: <span id="fan-val">{{ device.fan_speed|default:3 }}</span></label>
+        <input type="range" min="1" max="5" value="{{ device.fan_speed|default:3 }}"
+               class="fat-slider vertical-slider"
+               oninput="document.getElementById('fan-val').textContent = this.value"
+               onchange="updateDevice({{ device.id }}, 'fan_speed', this.value)">
+    {% endif %}
+</div>
+

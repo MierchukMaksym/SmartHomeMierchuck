@@ -1,0 +1,61 @@
+{% extends "smarthome/base.html" %}
+{% block title %}Головна{% endblock %}
+
+{% block content %}
+<h4 class="text-center mb-4">🏠 Мій Розумний Дім</h4>
+
+{% for room in rooms %}
+    <a href="{% url 'room_detail' room.id %}" class="text-decoration-none text-dark">
+        <div class="room-tile d-flex align-items-center justify-content-between mb-3 p-3 border rounded-3 shadow-sm">
+            <div class="d-flex align-items-center">
+                <span style="font-size: 24px; margin-right: 10px;">{{ room.icon }}</span>
+                <strong>{{ room.name }}</strong>
+            </div>
+            <span class="text-muted">➡️</span>
+        </div>
+    </a>
+{% empty %}
+    <p class="text-center text-muted">Немає кімнат. Додай першу 👇</p>
+{% endfor %}
+<form method="post" action="{% url 'reset_home' %}" class="mt-4 text-center">
+    {% csrf_token %}
+    <button type="submit" class="btn btn-danger px-4 py-2 rounded-4 fw-bold shadow">
+        🧨 Скинути все (очистити дім)
+    </button>
+</form>
+
+<!-- КНОПКА ВЫЗОВА МОДАЛКИ -->
+<button class="add-btn" data-bs-toggle="modal" data-bs-target="#addRoomModal">
+    ➕ Додати кімнату
+</button>
+
+<!-- МОДАЛКА: додати кімнату -->
+<div class="modal fade" id="addRoomModal" tabindex="-1" aria-labelledby="addRoomModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content rounded-4 shadow">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addRoomModalLabel">Нова кімната</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрити"></button>
+      </div>
+      <div class="modal-body">
+
+        <div class="d-grid gap-3">
+            {% for val, label in form.name.field.choices %}
+                <form method="post" action="{% url 'home' %}">
+                    {% csrf_token %}
+                    <input type="hidden" name="name" value="{{ val }}">
+                    <button type="submit" class="btn btn-outline-primary d-flex align-items-center justify-content-between p-3 rounded-3 w-100">
+                        <span style="font-size: 20px;">{{ label }}</span>
+                        <span>➕</span>
+                    </button>
+                </form>
+            {% endfor %}
+        </div>
+
+      </div>
+    </div>
+  </div>
+</div>
+
+
+{% endblock %}

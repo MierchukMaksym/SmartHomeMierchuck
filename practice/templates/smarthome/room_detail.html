@@ -1,0 +1,286 @@
+{% extends "smarthome/base.html" %}
+{% block title %}{{ room.name }}{% endblock %}
+
+{% block content %}
+<style>
+.device-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+    gap: 12px;
+    margin-bottom: 30px;
+}
+.device-card {
+    border-radius: 12px;
+    border: 1px solid #ddd;
+    background-color: #fafafa;
+    padding: 10px;
+    height: 100px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    text-align: center;
+    cursor: pointer;
+    transition: 0.3s;
+}
+.device-card:hover {
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.08);
+    background-color: #f3f4f6;
+}
+input[type="range"].vertical-slider {
+    -webkit-appearance: slider-vertical;
+    writing-mode: bt-lr;
+    width: 100%;
+    height: 150px;
+    padding: 0;
+    margin: 10px auto;
+}
+input[type="range"].fat-slider {
+    appearance: none;
+    width: 100%;
+    height: 14px;
+    background: #d1d5db;
+    border-radius: 8px;
+    outline: none;
+}
+input[type="range"].fat-slider::-webkit-slider-thumb {
+    appearance: none;
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #4f46e5;
+    cursor: pointer;
+    box-shadow: 0 0 5px #6366f1;
+}
+input[type="range"].fat-slider::-moz-range-thumb {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    background: #4f46e5;
+    cursor: pointer;
+    box-shadow: 0 0 5px #6366f1;
+}
+.power-button {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    border: none;
+    background-color: #eee;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    transition: 0.2s;
+    cursor: pointer;
+    box-shadow: inset 0 0 5px rgba(0, 0, 0, 0.1);
+}
+.power-button.on {
+    background-color: #4ade80;
+    color: white;
+    box-shadow: 0 0 8px 3px #4ade80;
+}
+.power-button.off {
+    background-color: #e5e7eb;
+    color: #888;
+    box-shadow: none;
+}
+</style>
+
+<h4 class="text-center mb-4">{{ room.icon }} {{ room.name }}</h4>
+
+{% if devices %}
+    <div class="device-grid">
+      {% for device in devices %}
+        <div class="device-card" onclick="loadDeviceSettings({{ device.id }})">
+            <div style="font-size: 22px;">{{ device.icon }}</div>
+            <div style="font-size: 14px;">{{ device.name }}</div>
+        </div>
+      {% endfor %}
+    </div>
+{% else %}
+    <p class="text-muted text-center mb-4">У цій кімнаті ще немає жодного пристрою 😴</p>
+{% endif %}
+
+    {% if switches %}
+<h5 class="mt-4 mb-2">🔘 Вимикачі:</h5>
+<div class="d-grid gap-3">
+  {% for switch in switches %}
+    <div class="p-3 border rounded-3 shadow-sm">
+      <div class="d-flex align-items-center justify-content-between">
+        <div>
+          <strong style="font-size: 18px;">{{ switch.icon }} {{ switch.name }}</strong><br>
+          <small class="text-muted">
+            Керує:
+            {% for lamp in switch.linked_lamps.all %}
+              {{ lamp.name }}{% if not forloop.last %}, {% endif %}
+            {% empty %}
+              (немає ламп)
+            {% endfor %}
+          </small>
+        </div>
+        <button class="btn btn-outline-primary fw-bold"
+                onclick="toggleSwitch('{{ switch.id }}')">
+          ⏻ Перемкнути
+        </button>
+      </div>
+    </div>
+  {% endfor %}
+</div>
+{% endif %}
+
+
+<!-- ⚙️ Настройки выбранного устройства -->
+<div id="device-settings-area">
+    <p class="text-center text-muted">Оберіть пристрій для налаштування ⬆️</p>
+</div>
+
+<!-- ➕ Додати пристрій -->
+<button class="add-btn" data-bs-toggle="modal" data-bs-target="#addDeviceModal">
+    ➕ Додати пристрій
+</button>
+    <!-- ➕ Додати вимикач -->
+<button class="add-btn" data-bs-toggle="modal" data-bs-target="#addSwitchModal">
+    ➕ Додати вимикач
+</button>
+
+
+<a href="{% url 'home' %}" class="d-block mt-4 text-center text-decoration-none text-muted">⬅️ Назад</a>
+
+<!-- МОДАЛКА -->
+<div class="modal fade" id="addDeviceModal" tabindex="-1" aria-labelledby="addDeviceModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content rounded-4 shadow">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addDeviceModalLabel">Додати пристрій</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрити"></button>
+      </div>
+      <div class="modal-body">
+        <form method="post" action="{% url 'add_device_to_room' room.id %}">
+            {% csrf_token %}
+            <div class="d-grid gap-3">
+                {% for item in add_forms %}
+                    <button type="submit" name="device_type" value="{{ item.type }}" class="btn btn-outline-primary d-flex align-items-center justify-content-between p-3 rounded-3">
+                        <span>{{ item.label }}</span>
+                        <span style="font-size: 20px;">{{ item.icon }}</span>
+                    </button>
+                {% endfor %}
+            </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+    <!-- МОДАЛКА: додати вимикач -->
+<div class="modal fade" id="addSwitchModal" tabindex="-1" aria-labelledby="addSwitchModalLabel" aria-hidden="true">
+  <div class="modal-dialog">
+    <div class="modal-content rounded-4 shadow">
+      <div class="modal-header">
+        <h5 class="modal-title" id="addSwitchModalLabel">🔘 Новий вимикач</h5>
+        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Закрити"></button>
+      </div>
+      <div class="modal-body">
+        <form method="post" action="{% url 'add_switch_to_room' room.id %}">
+          {% csrf_token %}
+
+          <div class="d-grid gap-3">
+            <input type="text" name="name" placeholder="Назва вимикача" class="form-control form-control-lg rounded-3">
+
+            <input type="text" name="icon" placeholder="Іконка (напр. 🔘)" class="form-control form-control-lg rounded-3">
+
+            <div class="border rounded-3 p-3" style="max-height: 200px; overflow-y: auto;">
+              <label class="form-label mb-2">Якими лампами керує?</label>
+              {% for lamp in switch_form.fields.linked_lamps.queryset %}
+                <div class="form-check">
+                  <input class="form-check-input" type="checkbox" name="linked_lamps" value="{{ lamp.id }}" id="lamp{{ lamp.id }}">
+                  <label class="form-check-label" for="lamp{{ lamp.id }}">
+                    {{ lamp.icon }} {{ lamp.name }} <small class="text-muted">({{ lamp.room.name }})</small>
+                  </label>
+                </div>
+              {% endfor %}
+            </div>
+
+            <button type="submit" class="btn btn-primary w-100 mt-2 fw-bold">💾 Створити вимикач</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+
+
+<!-- 🔧 СКРИПТЫ -->
+<script>
+function loadDeviceSettings(deviceId) {
+    fetch(`/device/settings/${deviceId}/`)
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById("device-settings-area").innerHTML = data.html;
+        });
+}
+
+function toggleDevice(deviceId) {
+    const btn = document.querySelector(`button[data-device-id="${deviceId}"]`);
+    if (!btn) {
+        console.warn("Button not found for device:", deviceId);
+        return;
+    }
+
+    const isCurrentlyOn = btn.classList.contains('on');
+    const newValue = !isCurrentlyOn;
+
+    console.log("⏻ TOGGLE device", deviceId, "→", newValue);
+
+    fetch('/device/update/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            device_id: deviceId,
+            field: 'is_on',
+            value: newValue
+        })
+    }).then(() => {
+        btn.classList.remove('on', 'off');
+        btn.classList.add(newValue ? 'on' : 'off');
+    });
+}
+
+function updateDevice(deviceId, field, value) {
+    console.log("🛠 updateDevice", deviceId, field, value);
+    fetch('/device/update/', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'X-CSRFToken': '{{ csrf_token }}'
+        },
+        body: JSON.stringify({
+            device_id: deviceId,
+            field: field,
+            value: value
+        })
+    });
+}
+
+function toggleSwitch(switchId) {
+    fetch(`/switch/toggle/${switchId}/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': '{{ csrf_token }}',
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        console.log(`🔘 Switch toggled. Result: ${data.message}`);
+        // по желанию можно автообновить настройки, например reload текущей лампы
+        loadDeviceSettings(data.last_lamp_id);  // если нужно, можно убрать
+    });
+}
+
+</script>
+{% endblock %}
